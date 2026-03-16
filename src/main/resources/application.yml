@@ -1,0 +1,145 @@
+server:
+  port: 8080
+  netty:
+    connection-timeout: 60000
+  tomcat:
+    max-connections: 60000
+    accept-count: 200
+    threads:
+      max: 400
+      min-spare: 50
+
+spring:
+  application:
+    name: message-dispatch
+  
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+      lettuce:
+        pool:
+          max-active: 200
+          max-idle: 100
+          min-idle: 20
+          max-wait: 5000ms
+        shutdown-timeout: 100ms
+      timeout: 3000ms
+
+  # JSON Configuration
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    date-format: yyyy-MM-dd'T'HH:mm:ss.SSS'Z'
+    time-zone: UTC
+
+# WebSocket Configuration
+websocket:
+  max-connections: 60000
+  heartbeat-interval: 30000
+  connection-timeout: 60000
+  message-buffer-size: 8192
+  allowed-origins: "*"
+  
+  # Reconnection settings
+  reconnect:
+    enabled: true
+    max-attempts: 5
+    initial-delay: 1000
+    max-delay: 30000
+    multiplier: 2.0
+
+# Message Configuration
+message:
+  dispatch:
+    thread-pool-size: 100
+    queue-capacity: 10000
+    retry-attempts: 3
+    retry-delay: 1000
+    acknowledgment-timeout: 10000
+    batch-size: 100
+
+# Redis Pub/Sub Configuration
+redis:
+  pubsub:
+    channels:
+      broadcast: "message:broadcast"
+      unicast: "message:unicast"
+      system: "message:system"
+    message-listener:
+      threads: 10
+
+# Metrics and Telemetry Configuration (Micrometer)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,websocket,connections
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+    prometheus:
+      enabled: true
+    metrics:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      version: 1.0.0
+    export:
+      prometheus:
+        enabled: true
+        step: 1m
+        descriptions: true
+    distribution:
+      percentiles-histogram:
+        websocket.connection.duration: true
+        websocket.message.processing.time: true
+        message.dispatch.latency: true
+      percentiles:
+        websocket.connection.duration: 0.5,0.95,0.99
+        websocket.message.processing.time: 0.5,0.95,0.99
+        message.dispatch.latency: 0.5,0.95,0.99
+  health:
+    redis:
+      enabled: true
+    websocket:
+      enabled: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.messagedispatch: DEBUG
+    org.springframework.web.socket: DEBUG
+    io.lettuce.core: WARN
+    io.netty: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/message-dispatch.log
+    max-size: 100MB
+    max-history: 30
+
+# Performance Tuning
+performance:
+  netty:
+    boss-threads: 2
+    worker-threads: ${NETTY_WORKER_THREADS:0}  # 0 = auto (2 * CPU cores)
+    so-backlog: 1024
+    so-reuseaddr: true
+    tcp-nodelay: true
+    so-keepalive: true
+    write-buffer-high-water-mark: 65536
+    write-buffer-low-water-mark: 32768
